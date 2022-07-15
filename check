@@ -1,0 +1,125 @@
+#!/usr/bin/env python3
+#
+# check: a script to run frequently used commands to check source code quality, namely:
+#   - `cargo check`
+#   - `cargo fmt`
+#   - `cargo clippy`
+#   - `cargo test`
+#
+# This script requires the following components:
+#   - rustc
+#   - cargo
+#   - clippy
+#   - rustfmt
+# all of which can be installed with rustup.
+#
+# See check --help for all available flags.
+#
+# Last but not least, you will also need Python 3.10 or later.
+
+MIN_PYTHON_VERSION = (3, 10)
+
+import sys
+
+from argparse import ArgumentParser
+from enum import Enum
+from subprocess import run
+
+
+class RustToolchain(Enum):
+    # Although there are other toolchains (beta), for the purpose of this script I'm only using either stable
+    # or nightly.
+    stable = 'stable'
+    nightly = 'nightly'
+
+    def __str__(self):
+        return self.value
+
+
+def build_argparser() -> ArgumentParser:
+    parser = ArgumentParser(description="Check project is compliant with the standards")
+
+    parser.add_argument(
+        '-t',
+        '--toolchain',
+        type=RustToolchain,
+        choices=list(RustToolchain),
+        default=RustToolchain.stable,
+        help='Rust toolchain to use, defaults to stable. If choosing nightly, requires the complete nightly toolchain.'
+    )
+    parser.add_argument(
+        '-s',
+        '--strict',
+        action='store_true',
+        default=False,
+        help='When present, warnings will turn into errors.'
+    )
+
+    return parser
+
+
+def cargo_check(toolchain: RustToolchain) -> None:
+    # Command: `cargo [+nightly] check`
+
+    command = 'cargo '
+    if toolchain == RustToolchain.nightly:
+        command += '+nightly '
+    command += 'check'
+
+    run(command.split(), check=True)
+
+
+def cargo_test(toolchain: RustToolchain) -> None:
+    # Command: `cargo [+nightly] test`
+
+    command = 'cargo '
+    if toolchain == RustToolchain.nightly:
+        command += '+nightly '
+    command += 'test'
+
+    run(command.split(), check=True)
+
+
+def cargo_clippy(toolchain: RustToolchain, is_strict: bool) -> None:
+    # Command: `cargo [+nightly] clippy [-- -D warnings]`
+
+    command = 'cargo '
+    if toolchain == RustToolchain.nightly:
+        command += '+nightly '
+    command += 'clippy'
+    if is_strict:
+        command += ' -- -D warnings'
+
+    run(command.split(), check=True)
+
+
+def cargo_fmt(toolchain: RustToolchain, is_strict: bool) -> None:
+    # Command: `cargo [+nightly] fmt [--check]`
+
+    command = 'cargo '
+    if toolchain == RustToolchain.nightly:
+        command += '+nightly '
+    command += 'fmt'
+    if is_strict:
+        command += ' --check'
+
+    run(command.split(), check=True)
+
+
+def main() -> None:
+    assert sys.version_info >= MIN_PYTHON_VERSION
+
+    argparser = build_argparser()
+    args = argparser.parse_args()
+
+    is_nightly = args.toolchain == RustToolchain.nightly
+    is_strict = args.strict
+
+    cargo_check(is_nightly)
+    cargo_test(is_nightly)
+    cargo_clippy(is_nightly, is_strict)
+    cargo_fmt(is_nightly, is_strict)
+
+
+if __name__ == '__main__':
+    main()
