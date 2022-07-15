@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# check: a script to run frequently used commands to check source code quality, namely:
+# check: a script to run frequently used commands to ensure rust source code quality, namely:
 #   - `cargo check`
 #   - `cargo fmt`
 #   - `cargo clippy`
@@ -15,7 +15,7 @@
 #
 # See check --help for all available flags.
 #
-# Last but not least, you will also need Python 3.10 or later.
+# Last but not least, you will also need Python 3.
 
 MIN_PYTHON_VERSION = (3, 10)
 
@@ -45,14 +45,14 @@ def build_argparser() -> ArgumentParser:
         type=RustToolchain,
         choices=list(RustToolchain),
         default=RustToolchain.stable,
-        help='Rust toolchain to use, defaults to stable. If choosing nightly, requires the complete nightly toolchain.'
+        help='Rust toolchain to use, defaults to stable. Requires the complete nightly toolchain if using -t nightly.'
     )
     parser.add_argument(
         '-s',
         '--strict',
         action='store_true',
         default=False,
-        help='When present, warnings will turn into errors.'
+        help='When present most warnings will turn into errors.'
     )
 
     return parser
@@ -112,13 +112,13 @@ def main() -> None:
     argparser = build_argparser()
     args = argparser.parse_args()
 
-    is_nightly = args.toolchain == RustToolchain.nightly
+    toolchain = args.toolchain
     is_strict = args.strict
 
-    cargo_check(is_nightly)
-    cargo_test(is_nightly)
-    cargo_clippy(is_nightly, is_strict)
-    cargo_fmt(is_nightly, is_strict)
+    cargo_check(toolchain)
+    cargo_test(toolchain)
+    cargo_clippy(toolchain, is_strict)
+    cargo_fmt(toolchain, is_strict)
 
 
 if __name__ == '__main__':
